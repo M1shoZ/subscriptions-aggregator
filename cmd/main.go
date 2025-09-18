@@ -49,11 +49,3 @@ func setupRoutes(app *fiber.App) {
 
 	app.Get("/get_sum/:user_id/:service_name/:start_date/:end_date", handlers.GetSum)
 }
-
-// todo
-// написать крутой хэндлер
-// протестировать крутой хэндлер
-// придумать фичу
-// покрыть логами
-// вынести goose  в .env
-// напписать документацию на swagger
