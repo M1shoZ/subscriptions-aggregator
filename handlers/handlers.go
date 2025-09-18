@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"log"
+	"net/url"
 
 	"github.com/M1shoZ/subscriptions-aggregator/database"
 	"github.com/M1shoZ/subscriptions-aggregator/models"
@@ -283,41 +284,32 @@ func GetSum(c *fiber.Ctx) error {
 	log.Println("[GetSum] Request")
 
 	UserID := c.Params("user_id")
-	ServiceName := c.Params("service_name")
+	// ServiceName := c.Params("service_name")
 	StartDate := c.Params("start_date")
 	EndDate := c.Params("end_date")
+
+	serviceNameRaw := c.Params("service_name")
+	ServiceName, err := url.QueryUnescape(serviceNameRaw)
+	if err != nil {
+		log.Printf("Error decoding service name: %v", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid service name",
+		})
+	}
+
 	SubscriptionModel := &models.Subscriptions{}
 	var totalPrice int
 
-	if UserID == "" {
-		c.Status(fiber.StatusOK).JSON(&fiber.Map{
-			"message": "id cannot be empty",
+	if UserID == "" || ServiceName == "" || StartDate == "" || EndDate == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Missing required parameters",
 		})
-		return nil
-	}
-	if ServiceName == "" {
-		c.Status(fiber.StatusOK).JSON(&fiber.Map{
-			"message": "ServiceName cannot be empty",
-		})
-		return nil
-	}
-	if StartDate == "" {
-		c.Status(fiber.StatusOK).JSON(&fiber.Map{
-			"message": "StartDate cannot be empty",
-		})
-		return nil
-	}
-	if EndDate == "" {
-		c.Status(fiber.StatusOK).JSON(&fiber.Map{
-			"message": "EndDate id cannot be empty",
-		})
-		return nil
 	}
 
 	// fmt.Println("GOT:", UserID, ServiceName, StartDate, EndDate)
 
-	err := database.DB.Db.Model(SubscriptionModel).
-		Select("SUM(price)").
+	err = database.DB.Db.Model(SubscriptionModel).
+		Select("COALESCE(SUM(price), 0)").
 		Where("user_id = ? AND service_name = ? AND start_date BETWEEN ? AND ?", UserID, ServiceName, StartDate, EndDate).
 		Scan(&totalPrice).Error
 
